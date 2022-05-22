@@ -1170,6 +1170,8 @@ void IRac::haier(IRHaierAC *ac,
 /// @param[in] turbo Run the device in turbo/powerful mode.
 /// @param[in] quiet Run the device in quiet mode.
 /// @param[in] clean Turn on the clean mode.
+/// @param[in] light Turn on the LED/Display mode.
+/// @param[in] prevlight Previous LED/Display mode.
 /// @param[in] sleep Nr. of minutes for sleep mode. -1 is Off, >= 0 is on.
 void IRac::haier160(IRHaierAC160 *ac,
                     const bool on, const stdAc::opmode_t mode,
@@ -1177,6 +1179,7 @@ void IRac::haier160(IRHaierAC160 *ac,
                     const stdAc::fanspeed_t fan,
                     const stdAc::swingv_t swingv,
                     const bool turbo, const bool quiet, const bool clean,
+                    const bool light, const bool prevlight,
                     const int16_t sleep) {
   ac->begin();
   // No Model setting available.
@@ -1188,13 +1191,14 @@ void IRac::haier160(IRHaierAC160 *ac,
   // No Horizontal Swing setting available.
   ac->setQuiet(quiet);
   ac->setTurbo(turbo);
-  // No Light setting available.
   // No Filter setting available.
   ac->setClean(clean);
   // No Clean setting available.
   // No Beep setting available.
   ac->setSleep(sleep >= 0);  // Sleep on this A/C is either on or off.
   ac->setPower(on);
+  // Light needs to be sent last as the "button" value seems to control it.
+  ac->setLightToggle(light ^ prevlight);
   ac->send();
 }
 #endif  // SEND_HAIER_AC160
@@ -2762,6 +2766,9 @@ bool IRac::sendAc(const stdAc::state_t desired, const stdAc::state_t *prev) {
   const stdAc::swingv_t prev_swingv = (prev != NULL) ? prev->swingv
                                                      : stdAc::swingv_t::kOff;
 #endif  // (SEND_LG || SEND_SHARP_AC)
+#if (SEND_HAIER_AC160)
+  const bool prev_light = (prev != NULL) ? prev->light : !send.light;
+#endif  // (SEND_HAIER_AC160)
 #if SEND_MIDEA
   const bool prev_quiet = (prev != NULL) ? prev->quiet : !send.quiet;
 #endif  // SEND_MIDEA
@@ -2973,7 +2980,8 @@ bool IRac::sendAc(const stdAc::state_t desired, const stdAc::state_t *prev) {
     {
       IRHaierAC160 ac(_pin, _inverted, _modulation);
       haier160(&ac, send.power, send.mode, send.celsius, send.degrees,
-               send.fanspeed, send.swingv, send.turbo, send.clean, send.sleep);
+               send.fanspeed, send.swingv, send.turbo, send.clean,
+               send.light, prev_light, send.sleep);
       break;
     }
 #endif  // SEND_HAIER_AC160
@@ -4344,7 +4352,7 @@ namespace IRAcUtils {
       case decode_type_t::HAIER_AC160: {
         IRHaierAC160 ac(kGpioUnused);
         ac.setRaw(decode->state);
-        *result = ac.toCommon();
+        *result = ac.toCommon(prev);
         break;
       }
 #endif  // DECODE_HAIER_AC160
