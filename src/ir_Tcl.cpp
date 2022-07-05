@@ -354,6 +354,7 @@ void IRTcl112Ac::setTurbo(const bool on) {
   if (on) {
     _.Fan = kTcl112AcFanHigh;
     _.SwingV = kTcl112AcSwingVOn;
+    setTemp(kTcl112AcTempMin);
   }
 }
 
