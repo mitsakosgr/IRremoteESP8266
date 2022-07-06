@@ -238,6 +238,31 @@ float IRTcl112Ac::getTemp(void) const {
   return result;
 }
 
+/// Set the raw (native) sensor temperature value.
+/// @note Bypasses any checks or additional actions.
+/// @param[in] code The desired native sensor temperature.
+void IRTcl112Ac::setSensorTempRaw(const uint8_t code) { _.SensorTemp = code; }
+
+/// Set the sensor temperature.
+/// @param[in] temp The temperature in degrees celsius.
+/// @warning Do not send messages with a Sensor Temp more frequently than once
+///   per minute, otherwise the A/C unit will ignore them.
+void IRTcl112Ac::setSensorTemp(const float celsius)
+{
+  // Make sure we have desired temp in the correct range.
+  float safecelsius = std::max(celsius, kTcl112AcTempMin);
+  safecelsius = std::min(safecelsius, kTcl112AcTempMax);
+
+  // round to first digit
+  setSensorTempRaw((uint8_t)(safecelsius + 0.5));
+
+  setIFeel(true); // Setting a Sensor temp means you want "I Feel" function.
+}
+
+/// Get the sensor temperature setting.
+/// @return The current setting for sensor temp. in degrees celsius.
+uint8_t IRTcl112Ac::getSensorTemp(void) const { return _.SensorTemp; }
+
 /// Set the speed of the fan.
 /// @param[in] speed The desired setting.
 /// @note Unknown speeds will default to Auto.
@@ -274,6 +299,18 @@ void IRTcl112Ac::setHealth(const bool on) { _.Health = on; }
 /// Get the Health (Filter) setting of the A/C.
 /// @return true, the setting is on. false, the setting is off.
 bool IRTcl112Ac::getHealth(void) const { return _.Health; }
+
+/// Set the IFeel (Remote Temp Sensor) setting of the A/C.
+/// @param[in] on true, the setting is on. false, the setting is off.
+void IRTcl112Ac::setIFeel(const bool on) {
+  _.IFeel = on;
+
+  if (!on) _.SensorTemp = 0;
+}
+
+/// Get the IFeel (Remote Temp Sensor) setting of the A/C.
+/// @return true, the setting is on. false, the setting is off.
+bool IRTcl112Ac::getIFeel(void) const { return _.IFeel; }
 
 /// Set the Light (LED/Display) setting of the A/C.
 /// @param[in] on true, the setting is on. false, the setting is off.
@@ -513,6 +550,7 @@ String IRTcl112Ac::toString(void) const {
         result += addBoolToString(_.SwingH, kSwingHStr);
         result += addBoolToString(_.Econo, kEconoStr);
         result += addBoolToString(_.Health, kHealthStr);
+        result += addBoolToString(_.IFeel, kIFeelStr);
         result += addBoolToString(_.Turbo, kTurboStr);
         result += addBoolToString(getLight(), kLightStr);
       }
@@ -522,6 +560,13 @@ String IRTcl112Ac::toString(void) const {
       result += addLabeledString(
           _.OffTimerEnabled ? minsToString(getOffTimer()) : kOffStr,
           kOffTimerStr);
+      result += addLabeledString(
+      (getIFeel() == false)
+          // Encasing with String(blah) to keep compatible with old arduino
+          // frameworks. Not needed with 3.0.2.
+          ///> @see https://github.com/crankyoldgit/IRremoteESP8266/issues/1639#issuecomment-944906016
+          ? kOffStr : String(uint64ToString(getSensorTemp()) + 'C'),
+      kSensorTempStr);
       break;
     case kTcl112AcSpecial:
       result += addBoolToString(_.Quiet, kQuietStr);

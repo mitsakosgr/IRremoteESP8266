@@ -50,7 +50,8 @@ union Tcl112Protocol{
     uint8_t Mode            :4;
     uint8_t Health          :1;
     uint8_t Turbo           :1;
-    uint8_t                 :2;
+    uint8_t                 :1;
+    uint8_t IFeel           :1;
     // Byte 7
     uint8_t Temp            :4;
     uint8_t                 :4;
@@ -68,7 +69,8 @@ union Tcl112Protocol{
     uint8_t OnTimer         :6;
     uint8_t                 :1;  // 0
     // Byte 11
-    uint8_t                 :8;  // 00000000
+    uint8_t SensorTemp      :6; // most probably 8 bits (only 6 tested)
+    uint8_t                 :2; // unknown 
     // Byte 12
     uint8_t                 :3;
     uint8_t SwingH          :1;
@@ -106,9 +108,13 @@ const uint8_t kTcl112AcFanHigh = 0b101;
 const uint8_t kTcl112AcFanNight = kTcl112AcFanMin;
 const uint8_t kTcl112AcFanQuiet = kTcl112AcFanMin;
 
+// Temperature
+const uint8_t kTcl112AcSensorTempMax = 63; // Celsius
+const uint8_t kTcl112AcSensorTempMin = 0;  // Celsius
 const float   kTcl112AcTempMax    = 31.0;
 const float   kTcl112AcTempMin    = 16.0;
 
+// Swing
 const uint8_t kTcl112AcSwingVOff =     0b000;
 const uint8_t kTcl112AcSwingVHighest = 0b001;
 const uint8_t kTcl112AcSwingVHigh =    0b010;
@@ -116,6 +122,7 @@ const uint8_t kTcl112AcSwingVMiddle =  0b011;
 const uint8_t kTcl112AcSwingVLow =     0b100;
 const uint8_t kTcl112AcSwingVLowest =  0b101;
 const uint8_t kTcl112AcSwingVOn =      0b111;
+
 // MsgType
 const uint8_t kTcl112AcNormal  = 0b01;
 const uint8_t kTcl112AcSpecial = 0b10;
@@ -147,6 +154,10 @@ class IRTcl112Ac {
   bool getPower(void) const;
   void setTemp(const float celsius);  // Celsius in 0.5 increments
   float getTemp(void) const;
+  void setSensorTempRaw(const uint8_t code) ;
+  void setSensorTemp(const float celsius);
+  uint8_t getSensorTemp(void) const;
+  void clearSensorTemp(void);
   void setMode(const uint8_t mode);
   uint8_t getMode(void) const;
   static uint8_t calcChecksum(uint8_t state[],
@@ -158,6 +169,8 @@ class IRTcl112Ac {
   void setEcono(const bool on);
   bool getEcono(void) const;
   void setHealth(const bool on);
+  bool getIFeel(void) const;
+  void setIFeel(const bool on);
   bool getHealth(void) const;
   void setLight(const bool on);
   bool getLight(void) const;
